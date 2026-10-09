@@ -21,7 +21,7 @@ for arg do
     esac
 done
 
-# Light mode is this launcher's default. An explicit mode always takes priority.
+# Follow macOS appearance by default. Explicit modes always take priority.
 mode_supplied=false
 for arg do
     case "$arg" in
@@ -29,7 +29,7 @@ for arg do
     esac
 done
 if [ "$mode_supplied" = false ]; then
-    set -- --mode light "$@"
+    set -- --mode auto "$@"
 fi
 
 # -H isolates home-relative runtime files in root's home; disabling .pyc

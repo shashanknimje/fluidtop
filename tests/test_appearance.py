@@ -29,7 +29,7 @@ class ThemeConfigurationTests(unittest.TestCase):
     def test_cli_modes_and_accent_option(self):
         result = CliRunner().invoke(main, ["--help"])
         self.assertEqual(result.exit_code, 0, result.output)
-        self.assertIn("--mode [light|dark]", result.output)
+        self.assertIn("--mode [light|dark|auto]", result.output)
         self.assertIn("--theme", result.output)
 
 
