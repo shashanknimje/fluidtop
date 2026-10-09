@@ -12,6 +12,40 @@ FluidTop is a Python-based `nvtop`-inspired command line tool specifically desig
 
 ![View animated demo (GIF)](https://raw.githubusercontent.com/FluidInference/fluidtop/main/images/live.gif)
 
+## Appearance modes (this fork)
+
+This fork adds a **true pure-white UI** alongside Textual's original dark mode.
+Light mode sets the screen, panels, and plot canvases to `#ffffff`, with
+dark text. The existing `--theme` still controls accent and chart colors.
+
+```bash
+git clone https://github.com/shashanknimje/fluidtop.git
+cd fluidtop
+uv sync --frozen
+uv build                                # Optional: create a wheel and sdist
+
+sudo "$PWD/.venv/bin/fluidtop" --mode light --theme cyan
+# Or:
+sudo "$PWD/.venv/bin/fluidtop" --mode dark --theme cyan
+```
+
+Press **d** to switch between light and dark while FluidTop is running.
+`--mode` defaults to `dark` for backward compatibility. These changes are
+only in this fork; installing `fluidtop` from PyPI runs upstream's version.
+
+### Keeping the fork up to date
+
+```bash
+git remote add upstream https://github.com/FluidInference/fluidtop.git  # Once
+git fetch upstream
+git switch main
+git merge upstream/main
+git push origin main
+```
+
+Resolve any merge conflicts locally before pushing. Appearance configuration
+lives in a separate module to minimize ongoing upstream merge conflicts.
+
 ## 📦 Installation & Usage
 
 ### Quick Start with UV (Recommended)
