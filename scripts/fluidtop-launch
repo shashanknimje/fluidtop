@@ -1,0 +1,37 @@
+#!/bin/sh
+# Run the user-installed FluidTop CLI with sudo without writing root-owned
+# Python bytecode into UV's per-user tool environment.
+set -eu
+
+: "${HOME:?HOME must be set}"
+FLUIDTOP_BIN=${FLUIDTOP_BIN:-"$HOME/.local/bin/fluidtop"}
+
+if [ ! -x "$FLUIDTOP_BIN" ]; then
+    printf '%s\n' "fluidtop-launch: executable not found: $FLUIDTOP_BIN" >&2
+    printf '%s\n' 'Install your fork as your regular user with: uv tool install --force .' >&2
+    exit 127
+fi
+
+# --help must not trigger a privilege prompt.
+for arg do
+    case "$arg" in
+        --help|-h)
+            exec "$FLUIDTOP_BIN" "$@"
+            ;;
+    esac
+done
+
+# Light mode is this launcher's default. An explicit mode always takes priority.
+mode_supplied=false
+for arg do
+    case "$arg" in
+        --mode|--mode=*) mode_supplied=true ;;
+    esac
+done
+if [ "$mode_supplied" = false ]; then
+    set -- --mode light "$@"
+fi
+
+# -H isolates home-relative runtime files in root's home; disabling .pyc
+# generation prevents root-owned bytecode caches under the UV installation.
+exec sudo -H /usr/bin/env PYTHONDONTWRITEBYTECODE=1 "$FLUIDTOP_BIN" "$@"

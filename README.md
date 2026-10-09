@@ -33,6 +33,40 @@ Press **d** to switch between light and dark while FluidTop is running.
 `--mode` defaults to `dark` for backward compatibility. These changes are
 only in this fork; installing `fluidtop` from PyPI runs upstream's version.
 
+### Launcher for UV tool installations (recommended)
+
+Install the fork as your ordinary user. Then install the standalone launcher
+next to UV's `fluidtop` executable (do **not** run `uv tool install` with sudo):
+
+```bash
+cd ~/development/fluidtop
+git pull --ff-only
+uv tool install --force .
+install -m 755 scripts/fluidtop-launch "$HOME/.local/bin/fluidtop-launch"
+```
+
+Now launch with a **pure-white** background using a short command:
+
+```bash
+fluidtop-launch
+fluidtop-launch --mode dark --theme cyan
+fluidtop-launch --mode light --theme green --interval 2
+```
+
+The launcher defaults to `--mode light`; explicit CLI options override it,
+and all other arguments pass through unchanged. `--help` doesn't require
+sudo. If UV installed the executable somewhere else, set `FLUIDTOP_BIN` to
+its absolute path.
+
+This launcher executes `sudo -H /usr/bin/env PYTHONDONTWRITEBYTECODE=1`
+with the per-user FluidTop executable. `PYTHONDONTWRITEBYTECODE` prevents
+new root-owned Python `__pycache__` files inside UV's managed environment,
+avoiding the uninstall/upgrade permission problem caused by running the
+Python application as root. The `-H` flag selects root's home directory
+for screenshot paths (typically `/var/root/fluidtop_screenshots`). This
+launcher does **not** remove root privileges from the application; only
+a future collector-only privilege separation change would do that.
+
 ### Keeping the fork up to date
 
 ```bash
