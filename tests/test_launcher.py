@@ -44,7 +44,7 @@ class LauncherTests(unittest.TestCase):
             check=False,
         )
 
-    def test_default_light_mode_and_safe_env(self):
+    def test_default_auto_mode_and_safe_env(self):
         result = self.launch()
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(
@@ -55,7 +55,7 @@ class LauncherTests(unittest.TestCase):
                 "PYTHONDONTWRITEBYTECODE=1",
                 str(self.fluidtop_bin),
                 "--mode",
-                "light",
+                "auto",
             ],
         )
 

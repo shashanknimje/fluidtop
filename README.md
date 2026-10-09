@@ -30,8 +30,20 @@ sudo "$PWD/.venv/bin/fluidtop" --mode dark --theme cyan
 ```
 
 Press **d** to switch between light and dark while FluidTop is running.
-`--mode` defaults to `dark` for backward compatibility. These changes are
-only in this fork; installing `fluidtop` from PyPI runs upstream's version.
+Use `--mode auto` to follow the current macOS Appearance setting every 5
+seconds, including the system's scheduled changes. While in auto mode, **d**
+temporarily overrides the theme until the next macOS change; press **a**
+to resume following immediately.
+
+```bash
+fluidtop-launch                        # auto: follows macOS
+fluidtop-launch --mode light           # fixed pure-white
+fluidtop-launch --mode dark            # fixed dark
+```
+
+The underlying `fluidtop` executable still defaults to `--mode dark` for
+backward compatibility; the launcher defaults to `auto`. This feature is
+specific to the fork; PyPI `fluidtop` still uses upstream code.
 
 ### Launcher for UV tool installations (recommended)
 
@@ -45,16 +57,19 @@ uv tool install --force .
 install -m 755 scripts/fluidtop-launch "$HOME/.local/bin/fluidtop-launch"
 ```
 
-Now launch with a **pure-white** background using a short command:
+Launch and **follow macOS Light/Dark automatically** using a short command:
 
 ```bash
-fluidtop-launch
-fluidtop-launch --mode dark --theme cyan
-fluidtop-launch --mode light --theme green --interval 2
+fluidtop-launch                             # auto, follows macOS
+fluidtop-launch --mode dark --theme cyan    # fixed dark
+fluidtop-launch --mode light --theme green --interval 2  # fixed white
 ```
 
-The launcher defaults to `--mode light`; explicit CLI options override it,
-and all other arguments pass through unchanged. `--help` doesn't require
+The launcher defaults to `--mode auto` and checks the original user's global
+appearance preferences every five seconds, even though the dashboard runs
+with `sudo -H`. Explicit `--mode light` or `--mode dark` overrides it; all
+other arguments pass through unchanged. If the preference cannot be read,
+the current appearance is retained (dark until the first successful read). `--help` doesn't require
 sudo. If UV installed the executable somewhere else, set `FLUIDTOP_BIN` to
 its absolute path.
 

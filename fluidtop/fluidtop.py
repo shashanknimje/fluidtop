@@ -9,6 +9,7 @@ from textual.containers import Horizontal, Vertical
 from textual.widgets import ProgressBar, Static, Label, Button
 from textual_plotext import PlotextPlot
 from .appearance import DARK_THEME_NAME, LIGHT_THEME_NAME, PURE_WHITE_THEME
+from .system_appearance import read_system_appearance
 import plotext as plt
 import os
 from datetime import datetime
@@ -371,11 +372,18 @@ class MultiLineChart(PlotextPlot):
 class FluidTopApp(App):
     """Main FluidTop application using Textual"""
 
-    BINDINGS = [("d", "toggle_mode", "Toggle light/dark")]
+    BINDINGS = [
+        ("d", "toggle_mode", "Toggle light/dark"),
+        ("a", "follow_system", "Follow macOS appearance"),
+    ]
     
     # CSS is set dynamically in _apply_theme method
     
     def __init__(self, interval: int, theme: str, avg: int, max_count: int, mode: str = "dark"):
+        self.appearance_mode = mode
+        self._last_system_appearance = None
+        self._manual_theme_override = False
+        self._appearance_poll_running = False
         self.interval = interval
         # Store theme temporarily, don't assign to self.theme yet
         theme_value = theme
@@ -590,8 +598,40 @@ class FluidTopApp(App):
     """
         
     def action_toggle_mode(self) -> None:
-        """Toggle both the interface and automatically themed plots."""
+        """Manually toggle; auto mode resumes when macOS next changes."""
+        if self.appearance_mode == "auto":
+            self._manual_theme_override = True
         self.theme = DARK_THEME_NAME if self.theme == LIGHT_THEME_NAME else LIGHT_THEME_NAME
+
+    def action_follow_system(self) -> None:
+        """Cancel the manual override and follow the last observed macOS mode."""
+        if self.appearance_mode != "auto":
+            return
+        self._manual_theme_override = False
+        if self._last_system_appearance is not None:
+            self.theme = (
+                LIGHT_THEME_NAME if self._last_system_appearance == "light"
+                else DARK_THEME_NAME
+            )
+
+    async def _sync_system_appearance(self) -> None:
+        """Poll without blocking the Textual event loop or restarting metrics."""
+        if self.appearance_mode != "auto" or self._appearance_poll_running:
+            return
+        self._appearance_poll_running = True
+        try:
+            current = await asyncio.to_thread(read_system_appearance)
+        finally:
+            self._appearance_poll_running = False
+        if current is None:
+            return
+        if current != self._last_system_appearance:
+            self._last_system_appearance = current
+            self._manual_theme_override = False
+        if not self._manual_theme_override:
+            desired = LIGHT_THEME_NAME if current == "light" else DARK_THEME_NAME
+            if self.theme != desired:
+                self.theme = desired
 
     def compose(self) -> ComposeResult:
         """Compose the UI layout"""
@@ -623,6 +663,10 @@ class FluidTopApp(App):
     
     async def on_mount(self):
         """Initialize the application on mount"""
+        if self.appearance_mode == "auto":
+            # Follow macOS's schedule, regardless of the CPU/GPU collection loop.
+            self.set_interval(5.0, self._sync_system_appearance)
+            await self._sync_system_appearance()
         # Start powermetrics process
         self.timecode = str(int(time.time()))
         self.powermetrics_process = run_powermetrics_process(
@@ -859,8 +903,8 @@ class FluidTopApp(App):
               help='Display interval and sampling interval for powermetrics (seconds)')
 @click.option('--theme', type=click.Choice(['default', 'dark', 'blue', 'green', 'red', 'purple', 'orange', 'cyan', 'magenta']), default='cyan',
               help='Choose color theme')
-@click.option('--mode', type=click.Choice(['light', 'dark']), default='dark', show_default=True,
-              help='UI appearance (light uses a pure white background)')
+@click.option('--mode', type=click.Choice(['light', 'dark', 'auto']), default='dark', show_default=True,
+              help='UI appearance (auto follows macOS Light/Dark while running)')
 @click.option('--avg', type=int, default=30,
               help='Interval for averaged values (seconds)')
 @click.option('--max_count', type=int, default=0,
