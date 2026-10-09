@@ -8,6 +8,7 @@ from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.widgets import ProgressBar, Static, Label, Button
 from textual_plotext import PlotextPlot
+from .appearance import DARK_THEME_NAME, LIGHT_THEME_NAME, PURE_WHITE_THEME
 import plotext as plt
 import os
 from datetime import datetime
@@ -55,9 +56,8 @@ class PowerChart(PlotextPlot):
         self.plt.title(self.title)
         self.plt.xlabel("Time (minutes ago)")
         self.plt.ylabel("Power (%)")
-        # Apply custom colors before setting auto_theme
-        # Set auto_theme to False to prevent overriding custom colors
-        self.auto_theme = False
+        # Keep Plotext's canvas and axis colors synchronized with Textual.
+        super().on_mount()
         self.plt.plotsize(None, None)  # Auto-size
         # Set Y-axis decimal precision
         self.plt.yfrequency(0)  # This will auto-determine the frequency
@@ -165,9 +165,8 @@ class UsageChart(PlotextPlot):
         self.plt.xlabel("Time (minutes ago)")
         self.plt.ylabel(self.ylabel)
         self.plt.ylim(0, 100)
-        # Apply custom colors before setting auto_theme
-        # Set auto_theme to False to prevent overriding custom colors
-        self.auto_theme = False
+        # Keep Plotext's canvas and axis colors synchronized with Textual.
+        super().on_mount()
         self.plt.plotsize(None, None)  # Auto-size
         # Set Y-axis decimal precision
         self.plt.yfrequency(0)  # This will auto-determine the frequency
@@ -277,9 +276,8 @@ class MultiLineChart(PlotextPlot):
         self.plt.title(self.title)
         self.plt.xlabel("Time (minutes ago)")
         self.plt.ylabel(self.ylabel)
-        # Apply custom colors before setting auto_theme
-        # Set auto_theme to False to prevent overriding custom colors
-        self.auto_theme = False
+        # Keep Plotext's canvas and axis colors synchronized with Textual.
+        super().on_mount()
         self.plt.plotsize(None, None)  # Auto-size
         # Set Y-axis decimal precision
         self.plt.yfrequency(0)  # This will auto-determine the frequency
@@ -372,10 +370,12 @@ class MultiLineChart(PlotextPlot):
 
 class FluidTopApp(App):
     """Main FluidTop application using Textual"""
+
+    BINDINGS = [("d", "toggle_mode", "Toggle light/dark")]
     
     # CSS is set dynamically in _apply_theme method
     
-    def __init__(self, interval: int, theme: str, avg: int, max_count: int):
+    def __init__(self, interval: int, theme: str, avg: int, max_count: int, mode: str = "dark"):
         self.interval = interval
         # Store theme temporarily, don't assign to self.theme yet
         theme_value = theme
@@ -384,6 +384,8 @@ class FluidTopApp(App):
         self._apply_theme(theme_value)
         
         super().__init__()
+        self.register_theme(PURE_WHITE_THEME)
+        self.theme = LIGHT_THEME_NAME if mode == "light" else DARK_THEME_NAME
         
         # Store theme value in a regular instance variable (not reactive)
         self._theme_name = theme_value
@@ -587,6 +589,10 @@ class FluidTopApp(App):
     }}
     """
         
+    def action_toggle_mode(self) -> None:
+        """Toggle both the interface and automatically themed plots."""
+        self.theme = DARK_THEME_NAME if self.theme == LIGHT_THEME_NAME else LIGHT_THEME_NAME
+
     def compose(self) -> ComposeResult:
         """Compose the UI layout"""
         
@@ -853,23 +859,25 @@ class FluidTopApp(App):
               help='Display interval and sampling interval for powermetrics (seconds)')
 @click.option('--theme', type=click.Choice(['default', 'dark', 'blue', 'green', 'red', 'purple', 'orange', 'cyan', 'magenta']), default='cyan',
               help='Choose color theme')
+@click.option('--mode', type=click.Choice(['light', 'dark']), default='dark', show_default=True,
+              help='UI appearance (light uses a pure white background)')
 @click.option('--avg', type=int, default=30,
               help='Interval for averaged values (seconds)')
 @click.option('--max_count', type=int, default=0,
               help='Max show count to restart powermetrics')
-def main(interval, theme, avg, max_count):
+def main(interval, theme, avg, max_count, mode):
     """fluidtop: Performance monitoring CLI tool for Apple Silicon"""
-    return _main_logic(interval, theme, avg, max_count)
+    return _main_logic(interval, theme, avg, max_count, mode)
 
 
-def _main_logic(interval, theme, avg, max_count):
+def _main_logic(interval, theme, avg, max_count, mode='dark'):
     """Main logic using Textual app"""
     print("\nFLUIDTOP - Performance monitoring CLI tool for Apple Silicon")
     print("Get help at `https://github.com/FluidInference/fluidtop`")
     print("P.S. You are recommended to run FLUIDTOP with `sudo fluidtop`\n")
     
     # Create and run the Textual app
-    app = FluidTopApp(interval, theme, avg, max_count)
+    app = FluidTopApp(interval, theme, avg, max_count, mode=mode)
     try:
         app.run()
     except KeyboardInterrupt:

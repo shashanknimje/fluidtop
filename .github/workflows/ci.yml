@@ -51,6 +51,9 @@ jobs:
             echo "⚠️  CLI entry point not in PATH (expected in development)"
           fi
 
+      - name: Test light/dark theming without privileged sensors
+        run: uv run python -m unittest discover -s tests -v
+
       - name: 📦 Test wheel installation
         run: |
           echo "🧪 Testing wheel installation..."
