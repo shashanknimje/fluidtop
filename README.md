@@ -29,11 +29,20 @@ sudo "$PWD/.venv/bin/fluidtop" --mode light --theme cyan
 sudo "$PWD/.venv/bin/fluidtop" --mode dark --theme cyan
 ```
 
-Press **d** to switch between light and dark while FluidTop is running.
-Use `--mode auto` to follow the current macOS Appearance setting every 5
-seconds, including the system's scheduled changes. While in auto mode, **d**
-temporarily overrides the theme until the next macOS change; press **a**
-to resume following immediately.
+### Keyboard shortcuts
+
+These shortcuts work while the FluidTop dashboard is open; neither requires
+restarting the application.
+
+| Key | Action |
+| --- | --- |
+| `d` | Toggle between light and dark. In `--mode auto`, temporarily override the macOS appearance until the next system appearance change. |
+| `a` | Resume following macOS Light/Dark immediately when using `--mode auto`. Has no effect in fixed light/dark modes. |
+
+Use `--mode auto` to follow the current macOS Appearance setting, including
+macOS's scheduled day/night changes. FluidTop checks for changes approximately
+every five seconds. In fixed `--mode light` or `--mode dark`, pressing `d`
+changes the theme for the current session; it does not enable auto-following.
 
 ```bash
 fluidtop-launch                        # auto: follows macOS
