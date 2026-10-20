@@ -13,7 +13,8 @@ from .system_appearance import read_system_appearance
 import plotext as plt
 import os
 from datetime import datetime
-from .utils import run_powermetrics_process, parse_powermetrics, get_soc_info, get_ram_metrics_dict
+from .utils import get_soc_info, get_ram_metrics_dict
+from .collector import PowermetricsCollector
 
 
 class MetricGauge(Static):
@@ -411,6 +412,7 @@ class FluidTopApp(App):
         
         # Powermetrics process
         self.powermetrics_process = None
+        self._collector_error_reported = False
         self.timecode = None
         self.last_timestamp = 0
         self.count = 0
@@ -668,10 +670,8 @@ class FluidTopApp(App):
             self.set_interval(5.0, self._sync_system_appearance)
             await self._sync_system_appearance()
         # Start powermetrics process
-        self.timecode = str(int(time.time()))
-        self.powermetrics_process = run_powermetrics_process(
-            self.timecode, interval=self.interval * 1000
-        )
+        self.powermetrics_process = PowermetricsCollector(int(self.interval * 1000))
+        self.powermetrics_process.start()
         
         # Wait for first reading
         await self.wait_for_first_reading()
@@ -689,10 +689,13 @@ class FluidTopApp(App):
     async def wait_for_first_reading(self):
         """Wait for the first powermetrics reading"""
         while True:
-            ready = parse_powermetrics(timecode=self.timecode)
+            ready = self.powermetrics_process.latest()
             if ready:
                 self.last_timestamp = ready[-1]
                 break
+            problem = self.powermetrics_process.problem()
+            if problem:
+                raise RuntimeError(f"Unable to start powermetrics: {problem}")
             await asyncio.sleep(0.1)
     
     async def update_metrics(self):
@@ -701,16 +704,18 @@ class FluidTopApp(App):
             # Handle max_count restart
             if self.max_count > 0 and self.count >= self.max_count:
                 self.count = 0
-                self.powermetrics_process.terminate()
-                self.timecode = str(int(time.time()))
-                self.powermetrics_process = run_powermetrics_process(
-                    self.timecode, interval=self.interval * 1000
-                )
+                self.powermetrics_process.stop()
+                self.powermetrics_process = PowermetricsCollector(int(self.interval * 1000))
+                self.powermetrics_process.start()
             self.count += 1
             
             # Parse powermetrics data
-            ready = parse_powermetrics(timecode=self.timecode)
+            ready = self.powermetrics_process.latest()
             if not ready:
+                problem = self.powermetrics_process.problem()
+                if problem and not self._collector_error_reported:
+                    self._collector_error_reported = True
+                    self.notify(problem, title="Powermetrics collector stopped", severity="error")
                 return
                 
             cpu_metrics_dict, gpu_metrics_dict, thermal_pressure, _, timestamp = ready
@@ -894,8 +899,8 @@ class FluidTopApp(App):
         """Clean up when app is closed"""
         if self.powermetrics_process:
             try:
-                self.powermetrics_process.terminate()
-            except:
+                self.powermetrics_process.stop()
+            except Exception:
                 pass
 
 @click.command()
@@ -927,18 +932,11 @@ def _main_logic(interval, theme, avg, max_count, mode='dark'):
     except KeyboardInterrupt:
         print("Stopping...")
     finally:
-        # Cleanup is handled in app.on_unmount()
-        pass
-    
-    return app.powermetrics_process
+        # Cleanup is handled in app.on_unmount().
+        if app.powermetrics_process:
+            app.powermetrics_process.stop()
+    return None
 
 
 if __name__ == "__main__":
-    powermetrics_process = main()
-    try:
-        powermetrics_process.terminate()
-        print("Successfully terminated powermetrics process")
-    except Exception as e:
-        print(e)
-        powermetrics_process.terminate()
-        print("Successfully terminated powermetrics process")
+    main()

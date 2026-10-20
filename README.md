@@ -215,6 +215,11 @@ FluidTop leverages macOS's built-in [`powermetrics`](https://www.unix.com/man-pa
 
 ### Technical Architecture
 
+Fluidtop consumes the unbuffered, NUL-delimited PLIST output from `powermetrics` over a pipe. Each record is limited to 8 MiB, and the application retains only the latest decoded measurement. No `/tmp/fluidtop_powermetrics*` files are created or globally deleted. On normal exit or optional `--max_count` rotation the collector is terminated and reaped. This eliminates repeated reads of an ever-growing monitoring file.
+
+For a cautious macOS smoke test after upgrading, launch `fluidtop-launch`, verify live readings, quit, and check `pgrep -fl 'fluidtop|powermetrics'` and `sysctl vm.swapusage`. A multiday macOS soak test has not yet been performed.
+
+
 * **CPU/GPU Utilization:** Active residency measurements via `powermetrics`
 * **Power Consumption:** Hardware energy counters and thermal state monitoring
 * **Memory Statistics:** [`psutil`](https://github.com/giampaolo/psutil) virtual memory and swap tracking
@@ -307,7 +312,7 @@ sudo uv run fluidtop --help  # Verify build works
 ### Current Issues
 - Chart height doesn't adapt to terminal height (width works correctly)
 - Plot colors don't always respect theme selection
-- Long-running sessions may require periodic restart
+- Measurements are streamed from powermetrics without an accumulating temporary file; only the latest reading is retained by the collector. Chart history remains bounded.
 
 ### Contributing
 - Report bugs and request features via [GitHub Issues](https://github.com/FluidInference/fluidtop/issues)

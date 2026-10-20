@@ -92,7 +92,7 @@ Try these solutions:
 
 ### FluidTop crashes or becomes unresponsive
 
-This can happen during long monitoring sessions. Use the `--max_count` option to automatically restart:
+The collector now streams measurements without accumulating temporary files. If the native `powermetrics` process fails, check its permissions and report the error. Optional periodic collector rotation remains available:
 ```bash
 sudo fluidtop --max_count 1000
 ```
